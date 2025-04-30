@@ -3,14 +3,14 @@ from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 
 class CustomerInfo(BaseModel):
-    name: str
-    email: str
-    phone: str
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
     company: Optional[str] = None
 
 class QuoteDetails(BaseModel):
-    product_name: str
-    quantity: int
+    product_name: Optional[str] = None
+    quantity: Optional[int] = None
     specifications: Dict[str, Any] = Field(default_factory=dict)
     additional_notes: Optional[str] = None
 
