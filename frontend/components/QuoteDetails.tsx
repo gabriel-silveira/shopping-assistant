@@ -10,7 +10,7 @@ interface CustomerInfo {
 interface QuoteDetails {
   product_name: string;
   quantity: number;
-  specifications: Record<string, any>;
+  specifications: string;
   additional_notes?: string;
 }
 
@@ -45,16 +45,10 @@ export default function QuoteDetails({ customerInfo, quoteDetails }: QuoteDetail
             <p><span className="font-medium">Produto:</span> {quoteDetails.product_name}</p>
             <p><span className="font-medium">Quantidade:</span> {quoteDetails.quantity}</p>
             
-            {Object.keys(quoteDetails.specifications).length > 0 && (
+            {quoteDetails.specifications && (
               <div>
                 <p className="font-medium mb-1">Especificações:</p>
-                <ul className="list-disc list-inside pl-2">
-                  {Object.entries(quoteDetails.specifications).map(([key, value]) => (
-                    <li key={key} className="text-sm">
-                      {key}: {value}
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-sm">{quoteDetails.specifications}</p>
               </div>
             )}
             
