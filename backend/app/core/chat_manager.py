@@ -11,7 +11,7 @@ class ChatManager:
         print("Processing message:", message)
 
         # Add user message to state
-        self.state.messages.append(message)
+        if message: self.state.messages.append(message)
         
         print("Self workflow:", self.workflow)
         # Process through workflow

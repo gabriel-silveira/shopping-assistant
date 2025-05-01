@@ -9,10 +9,31 @@ class CustomerInfo(BaseModel):
     company: Optional[str] = None
 
 class QuoteDetails(BaseModel):
-    product_name: Optional[str] = None
-    quantity: Optional[int] = None
-    specifications: Dict[str, Any] = Field(default_factory=dict)
-    additional_notes: Optional[str] = None
+    """Details of a quote request."""
+    product_name: str = ""
+    quantity: int = 0
+    specifications: str = ""
+    additional_notes: str = ""
+
+    @classmethod
+    def create_empty(cls) -> 'QuoteDetails':
+        """Create an empty QuoteDetails with default values."""
+        return cls(
+            product_name="",
+            quantity=0,
+            specifications="",
+            additional_notes=""
+        )
+
+    def dict(self, *args, **kwargs) -> Dict[str, Any]:
+        """Override dict method to ensure all fields have default values."""
+        data = super().dict(*args, **kwargs)
+        # Ensure all fields have default values
+        data["product_name"] = data.get("product_name", "") or ""
+        data["quantity"] = data.get("quantity", 0) or 0
+        data["specifications"] = data.get("specifications", "") or ""
+        data["additional_notes"] = data.get("additional_notes", "") or ""
+        return data
 
 class ChatMessage(BaseModel):
     content: str

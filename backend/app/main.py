@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict
 from .core.chat_manager import ChatManager
 from .models.chat import ChatMessage
+from datetime import datetime
 
 app = FastAPI(title="Shopping Assistant API")
 
@@ -24,6 +25,11 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
     
     if client_id not in chat_sessions:
         chat_sessions[client_id] = ChatManager()
+    
+    # Send initial greeting
+    initial_message = None
+    response = chat_sessions[client_id].process_message(initial_message)
+    await websocket.send_text(response.model_dump_json())
     
     try:
         while True:

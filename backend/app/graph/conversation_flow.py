@@ -51,9 +51,10 @@ def extract_quote_details(text: str) -> Dict[str, Any]:
     
     # Product name patterns
     product_patterns = [
-        r"(?i)(?:quero|preciso|gostaria de) (?:comprar|pedir|orçar|encomendar) (?:um|uma|o|a|os|as)? ([^\n.,0-9]+)",
-        r"(?i)(?:produto|item|peça|material): ?([^\n.,0-9]+)",
-        r"(?i)(?:preciso|quero|gostaria) de (?:um|uma|o|a|os|as)? ([^\n.,0-9]+)"
+        r"(?i)(?:quero|preciso|gostaria|necessito)(?:\s+de)?\s+([^.,]+)",
+        r"(?i)produto:?\s+([^.,]+)",
+        r"(?i)item:?\s+([^.,]+)",
+        r"(?i)pedido:?\s+([^.,]+)"
     ]
     for pattern in product_patterns:
         if match := re.search(pattern, text):
@@ -62,9 +63,10 @@ def extract_quote_details(text: str) -> Dict[str, Any]:
     
     # Quantity patterns
     quantity_patterns = [
-        r"(?i)(\d+) (?:unidades?|peças?|itens?)",
-        r"(?i)quantidade:? ?(\d+)",
-        r"(?i)(?:preciso|quero|gostaria) de (\d+)"
+        r"(?i)(\d+)\s+(?:unidades?|peças?|itens?|produtos?)",
+        r"(?i)quantidade:?\s*(\d+)",
+        r"(?i)(?:quero|preciso|gostaria|necessito)(?:\s+de)?\s+(\d+)",
+        r"(\d+)\s*(?:un|pc|pç)"
     ]
     for pattern in quantity_patterns:
         if match := re.search(pattern, text):
@@ -73,22 +75,26 @@ def extract_quote_details(text: str) -> Dict[str, Any]:
     
     # Specifications patterns
     spec_patterns = [
-        r"(?i)(?:especificações?|detalhes?|características?):? ?([^\n]+)",
-        r"(?i)(?:medidas?|tamanhos?|dimensões?):? ?([^\n]+)",
-        r"(?i)(?:cores?|materiais?):? ?([^\n]+)"
+        r"(?i)(?:com|de)\s+(\d+\s*(?:mm|cm|m|pol|polegadas?))",
+        r"(?i)especificações?:?\s+([^.]+)",
+        r"(?i)(?:tamanho|medida|dimensão|diâmetro):?\s+([^.,]+)",
+        r"(?i)material:?\s+([^.,]+)",
+        r"(?i)(?:em|no)?\s*(?:tamanho|medida|dimensão|diâmetro)\s+(?:de\s+)?(\d+\s*(?:mm|cm|m|pol|polegadas?))",
+        r"(?i)(?:de\s+)?(\d+\s*(?:mm|cm|m|pol|polegadas?))\s+(?:de\s+)?(?:tamanho|medida|dimensão|diâmetro)"
     ]
     for pattern in spec_patterns:
         if match := re.search(pattern, text):
-            if 'specifications' not in details:
-                details['specifications'] = {}
-            details['specifications']['details'] = match.group(1).strip()
+            details['specifications'] = match.group(1).strip()
+            break
     
     # Additional notes patterns
-    notes_patterns = [
-        r"(?i)(?:observações?|notas?|comentários?):? ?([^\n]+)",
-        r"(?i)(?:importante|obs):? ?([^\n]+)"
+    note_patterns = [
+        r"(?i)obs(?:ervações?)?:?\s+([^.]+)",
+        r"(?i)notas?:?\s+([^.]+)",
+        r"(?i)adicionais?:?\s+([^.]+)",
+        r"(?i)também\s+(?:quero|preciso|gostaria)\s+([^.]+)"
     ]
-    for pattern in notes_patterns:
+    for pattern in note_patterns:
         if match := re.search(pattern, text):
             details['additional_notes'] = match.group(1).strip()
             break
@@ -100,15 +106,12 @@ def create_conversation_graph():
         if not state.messages:
             # Initial greeting
             response = ChatMessage(
-                content="Olá! Sou o assistente de orçamentos. Como posso ajudar você hoje?",
+                content="Olá! Sou seu assistente de compras. Como posso ajudar você hoje?",
                 role="assistant"
             )
             state.messages.append(response)
             return state
 
-        # Initialize LLM
-        llm = ChatOpenAI(temperature=0.7)
-        
         # Convert chat history to LangChain message format
         history = []
         for msg in state.messages:
@@ -121,48 +124,24 @@ def create_conversation_graph():
                     if state.customer_info:
                         current_info = state.customer_info.dict()
                     current_info.update(info)
-                    
-                    # Atualiza o CustomerInfo com as informações parciais
                     state.customer_info = CustomerInfo(**current_info)
                     print("Updated customer info:", state.customer_info)
-                
-                # Try to extract quote details from user messages
-                if state.customer_info and any([
-                    getattr(state.customer_info, field, None)
-                    for field in ['name', 'email', 'phone']
-                ]):
-                    details = extract_quote_details(msg.content)
-                    if details:
-                        # Update quote details
-                        current_details = {}
-                        if state.quote_details:
-                            current_details = state.quote_details.dict()
-                        current_details.update(details)
-                        
-                        # Atualiza o QuoteDetails com as informações parciais
-                        state.quote_details = QuoteDetails(**current_details)
-                        print("Updated quote details:", state.quote_details)
 
                 history.append(HumanMessage(content=msg.content))
             else:
                 history.append(AIMessage(content=msg.content))
 
         # Process based on current state
-        if not state.customer_info or not all([
-            getattr(state.customer_info, field, None)
-            for field in ['name', 'email', 'phone']
-        ]):
-            print('Collecting customer information')
+        if len(state.messages) == 2 and state.messages[-1].role == "user":
+            # After first user message, start collecting info
+            print('Starting to collect customer information')
             
-            # Collecting customer information
+            # Initialize customer info
+            state.customer_info = CustomerInfo()
+            
+            # First question: Name
             system_template = """Você é um assistente profissional coletando informações para um orçamento.
-            Colete de forma natural as seguintes informações do cliente:
-            - Nome
-            - Email
-            - Telefone
-            - Empresa (opcional)
-            
-            Se já tiver todas as informações obrigatórias, confirme com o cliente e prossiga para coletar os detalhes do pedido."""
+            Agradeça o interesse do cliente e pergunte seu nome de forma educada."""
 
             # Create prompt template
             prompt = ChatPromptTemplate.from_messages([
@@ -171,7 +150,7 @@ def create_conversation_graph():
             ])
             
             # Create chain
-            chain = prompt | llm
+            chain = prompt | ChatOpenAI(temperature=0.7)
             
             # Run chain
             ai_response = chain.invoke({"history": history})
@@ -181,66 +160,203 @@ def create_conversation_graph():
                 content=ai_response.content,
                 role="assistant"
             ))
+            return state
 
-        elif not state.quote_details or not all([
-            getattr(state.quote_details, field, None)
-            for field in ['product_name', 'quantity']
-        ]):
-            print('Collecting quote details')
+        # Check if we have customer info and need to collect more
+        if state.customer_info:
+            # Extract info from last message
+            info = extract_customer_info(state.messages[-1].content)
+            
+            if not state.customer_info.name and info and info.get('name'):
+                state.customer_info.name = info['name']
+                # Ask for email
+                system_template = """Você é um assistente profissional coletando informações para um orçamento.
+                Agradeça o nome fornecido e pergunte o e-mail do cliente de forma educada."""
+                prompt = ChatPromptTemplate.from_messages([
+                    ("system", system_template),
+                    MessagesPlaceholder(variable_name="history")
+                ])
+                chain = prompt | ChatOpenAI(temperature=0.7)
+                ai_response = chain.invoke({"history": history})
+                state.messages.append(ChatMessage(
+                    content=ai_response.content,
+                    role="assistant"
+                ))
+                return state
 
-            # Collecting quote details
+            if not state.customer_info.email and info and info.get('email'):
+                state.customer_info.email = info['email']
+                # Ask for phone
+                system_template = """Você é um assistente profissional coletando informações para um orçamento.
+                Agradeça o e-mail fornecido e pergunte o telefone do cliente de forma educada."""
+                prompt = ChatPromptTemplate.from_messages([
+                    ("system", system_template),
+                    MessagesPlaceholder(variable_name="history")
+                ])
+                chain = prompt | ChatOpenAI(temperature=0.7)
+                ai_response = chain.invoke({"history": history})
+                state.messages.append(ChatMessage(
+                    content=ai_response.content,
+                    role="assistant"
+                ))
+                return state
+
+            if not state.customer_info.phone and info and info.get('phone'):
+                state.customer_info.phone = info['phone']
+                # Ask for company (optional)
+                system_template = """Você é um assistente profissional coletando informações para um orçamento.
+                Agradeça o telefone fornecido e pergunte o nome da empresa do cliente, mas deixe claro que é opcional."""
+                prompt = ChatPromptTemplate.from_messages([
+                    ("system", system_template),
+                    MessagesPlaceholder(variable_name="history")
+                ])
+                chain = prompt | ChatOpenAI(temperature=0.7)
+                ai_response = chain.invoke({"history": history})
+                state.messages.append(ChatMessage(
+                    content=ai_response.content,
+                    role="assistant"
+                ))
+                return state
+
+            # After collecting customer info, start collecting quote details
+            if not state.quote_details and state.customer_info.name and state.customer_info.email and state.customer_info.phone:
+                # Initialize quote details
+                state.quote_details = QuoteDetails.create_empty()
+
+                # Extract company from last message (optional)
+                if info and info.get('company'):
+                    state.customer_info.company = info['company']
+
+                # Ask for product
+                system_template = """Você é um assistente profissional coletando informações para um orçamento.
+                Se o cliente forneceu o nome da empresa, agradeça. Em seguida, pergunte qual produto o cliente deseja solicitar."""
+                prompt = ChatPromptTemplate.from_messages([
+                    ("system", system_template),
+                    MessagesPlaceholder(variable_name="history")
+                ])
+                chain = prompt | ChatOpenAI(temperature=0.7)
+                ai_response = chain.invoke({"history": history})
+                state.messages.append(ChatMessage(
+                    content=ai_response.content,
+                    role="assistant"
+                ))
+                return state
+
+            # Extract product details
+            details = extract_quote_details(state.messages[-1].content)
+            
+            if state.quote_details and not state.quote_details.product_name and details.get('product_name'):
+                state.quote_details.product_name = details['product_name']
+                # Ask for quantity
+                system_template = """Você é um assistente profissional coletando informações para um orçamento.
+                Pergunte a quantidade do produto que o cliente deseja."""
+                prompt = ChatPromptTemplate.from_messages([
+                    ("system", system_template),
+                    MessagesPlaceholder(variable_name="history")
+                ])
+                chain = prompt | ChatOpenAI(temperature=0.7)
+                ai_response = chain.invoke({"history": history})
+                state.messages.append(ChatMessage(
+                    content=ai_response.content,
+                    role="assistant"
+                ))
+                return state
+
+            if state.quote_details and not state.quote_details.quantity and details.get('quantity'):
+                state.quote_details.quantity = details['quantity']
+                # Ask for specifications
+                system_template = """Você é um assistente profissional coletando informações para um orçamento.
+                Pergunte as especificações do produto (como dimensões, material, etc)."""
+                prompt = ChatPromptTemplate.from_messages([
+                    ("system", system_template),
+                    MessagesPlaceholder(variable_name="history")
+                ])
+                chain = prompt | ChatOpenAI(temperature=0.7)
+                ai_response = chain.invoke({"history": history})
+                state.messages.append(ChatMessage(
+                    content=ai_response.content,
+                    role="assistant"
+                ))
+                return state
+
+            if state.quote_details and not state.quote_details.specifications and details.get('specifications'):
+                state.quote_details.specifications = details['specifications']
+                # Confirm all details
+                system_template = """Você é um assistente profissional coletando informações para um orçamento.
+                Confirme todos os detalhes do pedido com o cliente, incluindo:
+                - Produto: {product_name}
+                - Quantidade: {quantity}
+                - Especificações: {specifications}
+                
+                Pergunte se está tudo correto e se há mais alguma observação adicional."""
+                prompt = ChatPromptTemplate.from_messages([
+                    ("system", system_template.format(
+                        product_name=state.quote_details.product_name,
+                        quantity=state.quote_details.quantity,
+                        specifications=state.quote_details.specifications
+                    )),
+                    MessagesPlaceholder(variable_name="history")
+                ])
+                chain = prompt | ChatOpenAI(temperature=0.7)
+                ai_response = chain.invoke({"history": history})
+                state.messages.append(ChatMessage(
+                    content=ai_response.content,
+                    role="assistant"
+                ))
+                return state
+
+            # If we have additional notes, update them
+            if state.quote_details and details.get('additional_notes'):
+                state.quote_details.additional_notes = details['additional_notes']
+                # Thank the client and finish
+                system_template = """Você é um assistente profissional coletando informações para um orçamento.
+                Agradeça o cliente e informe que em breve entraremos em contato com o orçamento."""
+                prompt = ChatPromptTemplate.from_messages([
+                    ("system", system_template),
+                    MessagesPlaceholder(variable_name="history")
+                ])
+                chain = prompt | ChatOpenAI(temperature=0.7)
+                ai_response = chain.invoke({"history": history})
+                state.messages.append(ChatMessage(
+                    content=ai_response.content,
+                    role="assistant"
+                ))
+                state.completed = True
+                return state
+
+        # If we haven't returned yet, ask for missing info
+        if not state.customer_info.name:
             system_template = """Você é um assistente profissional coletando informações para um orçamento.
-            Colete de forma natural as seguintes informações do pedido:
-            - Nome do produto
-            - Quantidade
-            - Especificações específicas
-            - Observações adicionais (opcional)
-            
-            Se já tiver todas as informações necessárias, faça um resumo do pedido e pergunte se está tudo correto."""
-
-            # Create prompt template
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", system_template),
-                MessagesPlaceholder(variable_name="history")
-            ])
-            
-            # Create chain
-            chain = prompt | llm
-            
-            # Run chain
-            ai_response = chain.invoke({"history": history})
-            
-            # Add response to state
-            state.messages.append(ChatMessage(
-                content=ai_response.content,
-                role="assistant"
-            ))
-
+            Pergunte o nome do cliente de forma educada."""
+        elif not state.customer_info.email:
+            system_template = """Você é um assistente profissional coletando informações para um orçamento.
+            Pergunte o e-mail do cliente de forma educada."""
+        elif not state.customer_info.phone:
+            system_template = """Você é um assistente profissional coletando informações para um orçamento.
+            Pergunte o telefone do cliente de forma educada."""
+        elif state.quote_details and not state.quote_details.product_name:
+            system_template = """Você é um assistente profissional coletando informações para um orçamento.
+            Pergunte qual produto o cliente deseja."""
+        elif state.quote_details and not state.quote_details.quantity:
+            system_template = """Você é um assistente profissional coletando informações para um orçamento.
+            Pergunte a quantidade do produto."""
+        elif state.quote_details and not state.quote_details.specifications:
+            system_template = """Você é um assistente profissional coletando informações para um orçamento.
+            Pergunte as especificações do produto."""
         else:
-            print('Finalizing conversation')
+            system_template = """Você é um assistente profissional coletando informações para um orçamento.
+            Confirme os detalhes do pedido e pergunte se há mais alguma observação."""
 
-            # Finalizing conversation
-            system_template = """Faça um resumo completo do pedido de orçamento e agradeça ao cliente."""
-            
-            # Create prompt template
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", system_template),
-                MessagesPlaceholder(variable_name="history")
-            ])
-            
-            # Create chain
-            chain = prompt | llm
-            
-            # Run chain
-            ai_response = chain.invoke({"history": history})
-            
-            # Add response to state
-            state.messages.append(ChatMessage(
-                content=ai_response.content,
-                role="assistant"
-            ))
-            state.completed = True
-
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", system_template),
+            MessagesPlaceholder(variable_name="history")
+        ])
+        chain = prompt | ChatOpenAI(temperature=0.7)
+        ai_response = chain.invoke({"history": history})
+        state.messages.append(ChatMessage(
+            content=ai_response.content,
+            role="assistant"
+        ))
         return state
-    
+
     return process_state

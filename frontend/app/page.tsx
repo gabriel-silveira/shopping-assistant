@@ -51,10 +51,6 @@ export default function Home() {
       setIsConnected(false);
     };
 
-    setTimeout(() => {
-      sendMessage('Olá!');
-    }, 2000);
-
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
