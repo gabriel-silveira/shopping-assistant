@@ -5,13 +5,18 @@ import markdown
 import re
 from openai import OpenAI
 import numpy as np
+from dotenv import load_dotenv
+
+# Carrega variáveis do arquivo .env
+load_dotenv()
 
 class MilvusService:
-    def __init__(self, host: str = "localhost", port: str = "19530"):
+    def __init__(self):
         """Initialize connection to Milvus."""
-        self.host = host
-        self.port = port
-        self.collection_name = "products"
+        # Obtém configurações do arquivo .env com valores padrão caso não existam
+        self.host = os.getenv('MILVUS_HOST', 'localhost')
+        self.port = os.getenv('MILVUS_PORT', '19530')
+        self.collection_name = os.getenv('MILVUS_COLLECTION', 'products')
         self.dim = 1536  # Dimensão do modelo text-embedding-3-small da OpenAI
         self.client = OpenAI()  # Inicializa o cliente OpenAI
         self._connect()
@@ -54,6 +59,13 @@ class MilvusService:
             print(f"Created collection {self.collection_name} with schema")
         else:
             print(f"Collection {self.collection_name} already exists")
+
+    def recreate_collection(self):
+        """Recreate the collection from scratch."""
+        if utility.has_collection(self.collection_name):
+            utility.drop_collection(self.collection_name)
+            print(f"Dropped existing collection {self.collection_name}")
+        self._ensure_collection()
 
     def _get_embedding(self, text: str) -> List[float]:
         """
@@ -100,9 +112,13 @@ class MilvusService:
             price = re.search(r'Price[:\s]*R\$\s*([\d.,]+)', content)
             price = float(price.group(1).replace('.', '').replace(',', '.')) if price else 0.0
             
-            # Extract category
-            category = re.search(r'Category[:\s]*([\w\s]+)', content)
+            # Extract category (agora aceita / no valor)
+            category = re.search(r'\*\*Category\*\*:\s*([\w\s\/]+)', content)
             category = category.group(1).strip() if category else ""
+            
+            # Debug
+            print(f"Parsing file: {file_path}")
+            print(f"Category match: {category}")
             
             # Extract description (everything after ## Description)
             description = re.search(r'## Description\s+(.*?)(?=##|$)', content, re.DOTALL)
@@ -126,8 +142,12 @@ class MilvusService:
         try:
             collection = Collection(self.collection_name)
             
-            product_data = []
-            embeddings = []
+            ids = []  # Lista para IDs (será auto-gerado)
+            product_names = []  # Lista para nomes dos produtos
+            descriptions = []  # Lista para descrições
+            prices = []  # Lista para preços
+            categories = []  # Lista para categorias
+            embeddings = []  # Lista para embeddings
             
             # Process each markdown file
             for filename in os.listdir(markdown_dir):
@@ -142,21 +162,25 @@ class MilvusService:
                         # Get embedding from OpenAI
                         embedding = self._get_embedding(text_for_embedding)
                         
-                        product_data.append([
-                            product['product_name'],
-                            product['description'],
-                            product['price'],
-                            product['category']
-                        ])
+                        # Append data to respective lists
+                        product_names.append(product['product_name'])
+                        descriptions.append(product['description'])
+                        prices.append(product['price'])
+                        categories.append(product['category'])
                         embeddings.append(embedding)
             
-            if product_data:
+            if product_names:  # Se temos produtos para inserir
                 # Insert data into collection
-                collection.insert([
-                    product_data,  # Entity data
-                    embeddings    # Vector data
-                ])
-                print(f"Successfully imported {len(product_data)} products")
+                entities = [
+                    product_names,  # product_name field
+                    descriptions,   # description field
+                    prices,         # price field
+                    categories,     # category field
+                    embeddings     # embedding field
+                ]
+                
+                collection.insert(entities)
+                print(f"Successfully imported {len(product_names)} products")
             
             # Create index if not exists
             collection.create_index(field_name="embedding", index_params={
@@ -187,6 +211,12 @@ class MilvusService:
             collection = Collection(self.collection_name)
             collection.load()
 
+            # Normalize query text (remove acentos e converte para minúsculas)
+            import unicodedata
+            query_normalized = unicodedata.normalize('NFKD', query_text.lower()) \
+                .encode('ASCII', 'ignore') \
+                .decode('ASCII')
+
             # Get embedding from OpenAI
             query_vector = self._get_embedding(query_text)
 
@@ -209,18 +239,47 @@ class MilvusService:
             similar_products = []
             for hits in results:
                 for hit in hits:
+                    # Get entity fields
+                    fields = hit.fields
+                    product_name = str(fields.get("product_name", ""))
+                    
+                    # Normalize product name
+                    product_name_normalized = unicodedata.normalize('NFKD', product_name.lower()) \
+                        .encode('ASCII', 'ignore') \
+                        .decode('ASCII')
+                    
+                    # Calcula score combinado:
+                    # 1. Score de similaridade do vetor (0-1)
+                    vector_score = hit.score
+                    
+                    # 2. Score de correspondência de texto (0-1)
+                    # Verifica se as palavras da busca estão no nome do produto
+                    text_match_score = 0.0
+                    query_words = set(query_normalized.split())
+                    product_words = set(product_name_normalized.split())
+                    
+                    if query_words:  # Evita divisão por zero
+                        matching_words = query_words.intersection(product_words)
+                        text_match_score = len(matching_words) / len(query_words)
+                    
+                    # Score final: média ponderada (70% vetor, 30% texto)
+                    final_score = (0.7 * vector_score) + (0.3 * text_match_score)
+
                     product = {
                         "id": hit.id,
-                        "score": hit.score,
-                        "product_name": hit.entity.get("product_name"),
-                        "description": hit.entity.get("description"),
-                        "price": hit.entity.get("price"),
-                        "category": hit.entity.get("category")
+                        "score": final_score,
+                        "product_name": product_name,
+                        "description": str(fields.get("description", "")),
+                        "price": float(fields.get("price", 0.0)),
+                        "category": str(fields.get("category", ""))
                     }
-                    # Only include products with similarity score above threshold
-                    if hit.score >= 0.7:  # 70% similarity threshold
+                    
+                    # Inclui produtos com score combinado acima de 0.5 (50%)
+                    if final_score >= 0.5:
                         similar_products.append(product)
 
+            # Ordena por score decrescente
+            similar_products.sort(key=lambda x: x["score"], reverse=True)
             return similar_products
 
         except Exception as e:
