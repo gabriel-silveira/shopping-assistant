@@ -42,3 +42,13 @@ frontend/*.tsbuildinfo
 frontend/next-env.d.ts
 
 backend/venv
+backend/embedEtcd.yaml
+backend/standalone_embed.sh
+backend/volumes
+backend/user.yaml
+
+
+
+
+
+
