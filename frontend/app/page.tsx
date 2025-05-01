@@ -73,14 +73,16 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen bg-gray-100">
-      <div className="flex-1 flex flex-col p-4">
+      <div className="flex-1 flex flex-col p-4 overflow-hidden">
         <h1 className="text-2xl font-bold mb-4">Assistente de Orçamentos</h1>
         <div className="flex-1 bg-white rounded-lg shadow-lg overflow-hidden flex flex-col">
-          <ChatMessages messages={messages} />
+          <div className="flex-1 overflow-y-auto">
+            <ChatMessages messages={messages} />
+          </div>
           <ChatInput onSendMessage={sendMessage} disabled={!isConnected} />
         </div>
       </div>
-      <div className="w-96 p-4">
+      <div className="w-96 p-4 bg-white shadow-lg rounded-lg h-fit sticky top-4">
         <QuoteDetails
           customerInfo={customerInfo}
           quoteDetails={quoteDetails}

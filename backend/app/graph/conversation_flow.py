@@ -105,11 +105,10 @@ def create_conversation_graph():
     def process_state(state: ConversationState) -> ConversationState:
         if not state.messages:
             # Initial greeting
-            response = ChatMessage(
-                content="Olá! Sou seu assistente de compras. Como posso ajudar você hoje?",
+            state.messages.append(ChatMessage(
+                content="Olá! Sou o assistente virtual da CSN (Companhia Siderúrgica Nacional). Você quer solicitar um orçamento ou deseja informações sobre produtos?",
                 role="assistant"
-            )
-            state.messages.append(response)
+            ))
             return state
 
         # Convert chat history to LangChain message format
@@ -125,7 +124,6 @@ def create_conversation_graph():
                         current_info = state.customer_info.dict()
                     current_info.update(info)
                     state.customer_info = CustomerInfo(**current_info)
-                    print("Updated customer info:", state.customer_info)
 
                 history.append(HumanMessage(content=msg.content))
             else:
@@ -134,13 +132,12 @@ def create_conversation_graph():
         # Process based on current state
         if len(state.messages) == 2 and state.messages[-1].role == "user":
             # After first user message, start collecting info
-            print('Starting to collect customer information')
             
             # Initialize customer info
             state.customer_info = CustomerInfo()
             
             # First question: Name
-            system_template = """Você é um assistente profissional coletando informações para um orçamento.
+            system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
             Agradeça o interesse do cliente e pergunte seu nome de forma educada."""
 
             # Create prompt template
@@ -161,6 +158,12 @@ def create_conversation_graph():
                 role="assistant"
             ))
             return state
+        
+        info = extract_customer_info(state.messages[-1].content)
+        print(f'Nome: {info.get("name")}')
+        print(f'Email: {info.get("email")}')
+        print(f'Phone: {info.get("phone")}')
+        print(f'Company: {info.get("company")}\n')
 
         # Check if we have customer info and need to collect more
         if state.customer_info:
@@ -170,8 +173,8 @@ def create_conversation_graph():
             if not state.customer_info.name and info and info.get('name'):
                 state.customer_info.name = info['name']
                 # Ask for email
-                system_template = """Você é um assistente profissional coletando informações para um orçamento.
-                Agradeça o nome fornecido e pergunte o e-mail do cliente de forma educada."""
+                system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+                Agradeça o nome fornecido e solicite o e-mail do cliente para envio do orçamento."""
                 prompt = ChatPromptTemplate.from_messages([
                     ("system", system_template),
                     MessagesPlaceholder(variable_name="history")
@@ -187,8 +190,8 @@ def create_conversation_graph():
             if not state.customer_info.email and info and info.get('email'):
                 state.customer_info.email = info['email']
                 # Ask for phone
-                system_template = """Você é um assistente profissional coletando informações para um orçamento.
-                Agradeça o e-mail fornecido e pergunte o telefone do cliente de forma educada."""
+                system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+                Agradeça o e-mail fornecido e solicite um número de telefone para contato."""
                 prompt = ChatPromptTemplate.from_messages([
                     ("system", system_template),
                     MessagesPlaceholder(variable_name="history")
@@ -204,8 +207,8 @@ def create_conversation_graph():
             if not state.customer_info.phone and info and info.get('phone'):
                 state.customer_info.phone = info['phone']
                 # Ask for company (optional)
-                system_template = """Você é um assistente profissional coletando informações para um orçamento.
-                Agradeça o telefone fornecido e pergunte o nome da empresa do cliente, mas deixe claro que é opcional."""
+                system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+                Agradeça o telefone fornecido e pergunte em qual empresa o cliente trabalha, mas deixe claro que é opcional."""
                 prompt = ChatPromptTemplate.from_messages([
                     ("system", system_template),
                     MessagesPlaceholder(variable_name="history")
@@ -228,8 +231,8 @@ def create_conversation_graph():
                     state.customer_info.company = info['company']
 
                 # Ask for product
-                system_template = """Você é um assistente profissional coletando informações para um orçamento.
-                Se o cliente forneceu o nome da empresa, agradeça. Em seguida, pergunte qual produto o cliente deseja solicitar."""
+                system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+                Se o cliente forneceu o nome da empresa, agradeça. Em seguida, pergunte qual produto da CSN o cliente deseja solicitar."""
                 prompt = ChatPromptTemplate.from_messages([
                     ("system", system_template),
                     MessagesPlaceholder(variable_name="history")
@@ -248,7 +251,7 @@ def create_conversation_graph():
             if state.quote_details and not state.quote_details.product_name and details.get('product_name'):
                 state.quote_details.product_name = details['product_name']
                 # Ask for quantity
-                system_template = """Você é um assistente profissional coletando informações para um orçamento.
+                system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
                 Pergunte a quantidade do produto que o cliente deseja."""
                 prompt = ChatPromptTemplate.from_messages([
                     ("system", system_template),
@@ -265,7 +268,7 @@ def create_conversation_graph():
             if state.quote_details and not state.quote_details.quantity and details.get('quantity'):
                 state.quote_details.quantity = details['quantity']
                 # Ask for specifications
-                system_template = """Você é um assistente profissional coletando informações para um orçamento.
+                system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
                 Pergunte as especificações do produto (como dimensões, material, etc)."""
                 prompt = ChatPromptTemplate.from_messages([
                     ("system", system_template),
@@ -282,7 +285,7 @@ def create_conversation_graph():
             if state.quote_details and not state.quote_details.specifications and details.get('specifications'):
                 state.quote_details.specifications = details['specifications']
                 # Confirm all details
-                system_template = """Você é um assistente profissional coletando informações para um orçamento.
+                system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
                 Confirme todos os detalhes do pedido com o cliente, incluindo:
                 - Produto: {product_name}
                 - Quantidade: {quantity}
@@ -309,7 +312,7 @@ def create_conversation_graph():
             if state.quote_details and details.get('additional_notes'):
                 state.quote_details.additional_notes = details['additional_notes']
                 # Thank the client and finish
-                system_template = """Você é um assistente profissional coletando informações para um orçamento.
+                system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
                 Agradeça o cliente e informe que em breve entraremos em contato com o orçamento."""
                 prompt = ChatPromptTemplate.from_messages([
                     ("system", system_template),
@@ -326,25 +329,25 @@ def create_conversation_graph():
 
         # If we haven't returned yet, ask for missing info
         if not state.customer_info.name:
-            system_template = """Você é um assistente profissional coletando informações para um orçamento.
-            Pergunte o nome do cliente de forma educada."""
+            system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+            Solicite educadamente o nome do cliente."""
         elif not state.customer_info.email:
-            system_template = """Você é um assistente profissional coletando informações para um orçamento.
-            Pergunte o e-mail do cliente de forma educada."""
+            system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+            Solicite educadamente o e-mail do cliente."""
         elif not state.customer_info.phone:
-            system_template = """Você é um assistente profissional coletando informações para um orçamento.
-            Pergunte o telefone do cliente de forma educada."""
+            system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+            Solicite educadamente o número de telefone do cliente."""
         elif state.quote_details and not state.quote_details.product_name:
-            system_template = """Você é um assistente profissional coletando informações para um orçamento.
-            Pergunte qual produto o cliente deseja."""
+            system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+            Pergunte qual produto da CSN o cliente deseja."""
         elif state.quote_details and not state.quote_details.quantity:
-            system_template = """Você é um assistente profissional coletando informações para um orçamento.
+            system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
             Pergunte a quantidade do produto."""
         elif state.quote_details and not state.quote_details.specifications:
-            system_template = """Você é um assistente profissional coletando informações para um orçamento.
+            system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
             Pergunte as especificações do produto."""
         else:
-            system_template = """Você é um assistente profissional coletando informações para um orçamento.
+            system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
             Confirme os detalhes do pedido e pergunte se há mais alguma observação."""
 
         prompt = ChatPromptTemplate.from_messages([
