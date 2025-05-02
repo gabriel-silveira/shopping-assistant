@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, List, Union
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
@@ -102,17 +102,34 @@ def extract_quote_details(text: str) -> Dict[str, Any]:
     return details
 
 def create_conversation_graph():
+    def assistant_response(
+        system_template: str,
+        history: List[Union[HumanMessage, AIMessage]],
+        state: ConversationState,
+    ) -> ConversationState:
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", system_template),
+            MessagesPlaceholder(variable_name="history")
+        ])
+        chain = prompt | ChatOpenAI(temperature=0.7)
+        ai_response = chain.invoke({"history": history})
+        state.messages.append(ChatMessage(
+            content=ai_response.content,
+            role="assistant"
+        ))
+        return state
+
     def process_state(state: ConversationState) -> ConversationState:
         if not state.messages:
             # Initial greeting
             state.messages.append(ChatMessage(
-                content="Olá! Sou o assistente virtual da CSN (Companhia Siderúrgica Nacional). Você quer solicitar um orçamento ou deseja informações sobre produtos?",
+                content="Olá! Sou o assistente virtual da CSN. Que tipo de produto você precisa e para qual finalidade?",
                 role="assistant"
             ))
             return state
 
         # Convert chat history to LangChain message format
-        history = []
+        history: List[Union[HumanMessage, AIMessage]] = []
         for msg in state.messages:
             if msg.role == "user":
                 # Try to extract customer info from user messages
@@ -137,33 +154,10 @@ def create_conversation_graph():
             state.customer_info = CustomerInfo()
             
             # First question: Name
-            system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+            system_template = """Você é o assistente virtual da CSN, responsável por coletar informações para orçamentos.
             Agradeça o interesse do cliente e pergunte seu nome de forma educada."""
 
-            # Create prompt template
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", system_template),
-                MessagesPlaceholder(variable_name="history")
-            ])
-            
-            # Create chain
-            chain = prompt | ChatOpenAI(temperature=0.7)
-            
-            # Run chain
-            ai_response = chain.invoke({"history": history})
-            
-            # Add response to state
-            state.messages.append(ChatMessage(
-                content=ai_response.content,
-                role="assistant"
-            ))
-            return state
-        
-        info = extract_customer_info(state.messages[-1].content)
-        print(f'Nome: {info.get("name")}')
-        print(f'Email: {info.get("email")}')
-        print(f'Phone: {info.get("phone")}')
-        print(f'Company: {info.get("company")}\n')
+            return assistant_response(system_template, history, state)
 
         # Check if we have customer info and need to collect more
         if state.customer_info:
@@ -173,53 +167,26 @@ def create_conversation_graph():
             if not state.customer_info.name and info and info.get('name'):
                 state.customer_info.name = info['name']
                 # Ask for email
-                system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+                system_template = """Você é o assistente virtual da CSN, responsável por coletar informações para orçamentos.
                 Agradeça o nome fornecido e solicite o e-mail do cliente para envio do orçamento."""
-                prompt = ChatPromptTemplate.from_messages([
-                    ("system", system_template),
-                    MessagesPlaceholder(variable_name="history")
-                ])
-                chain = prompt | ChatOpenAI(temperature=0.7)
-                ai_response = chain.invoke({"history": history})
-                state.messages.append(ChatMessage(
-                    content=ai_response.content,
-                    role="assistant"
-                ))
-                return state
+
+                return assistant_response(system_template, history, state)
 
             if not state.customer_info.email and info and info.get('email'):
                 state.customer_info.email = info['email']
                 # Ask for phone
-                system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+                system_template = """Você é o assistente virtual da CSN, responsável por coletar informações para orçamentos.
                 Agradeça o e-mail fornecido e solicite um número de telefone para contato."""
-                prompt = ChatPromptTemplate.from_messages([
-                    ("system", system_template),
-                    MessagesPlaceholder(variable_name="history")
-                ])
-                chain = prompt | ChatOpenAI(temperature=0.7)
-                ai_response = chain.invoke({"history": history})
-                state.messages.append(ChatMessage(
-                    content=ai_response.content,
-                    role="assistant"
-                ))
-                return state
 
-            if not state.customer_info.phone and info and info.get('phone'):
-                state.customer_info.phone = info['phone']
+                return assistant_response(system_template, history, state)
+
+            if info and state.customer_info.phone and info.get('phone'):
+                state.customer_info.phone = info.get('phone')
                 # Ask for company (optional)
-                system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
-                Agradeça o telefone fornecido e pergunte em qual empresa o cliente trabalha, mas deixe claro que é opcional."""
-                prompt = ChatPromptTemplate.from_messages([
-                    ("system", system_template),
-                    MessagesPlaceholder(variable_name="history")
-                ])
-                chain = prompt | ChatOpenAI(temperature=0.7)
-                ai_response = chain.invoke({"history": history})
-                state.messages.append(ChatMessage(
-                    content=ai_response.content,
-                    role="assistant"
-                ))
-                return state
+                system_template = """Você é o assistente virtual da CSN, responsável por coletar informações para orçamentos.
+                Agradeça o telefone fornecido e pergunte se o pedido é para alguma empresa e, se sim, solicite o nome da empresa."""
+
+                return assistant_response(system_template, history, state)
 
             # After collecting customer info, start collecting quote details
             if not state.quote_details and state.customer_info.name and state.customer_info.email and state.customer_info.phone:
@@ -231,135 +198,43 @@ def create_conversation_graph():
                     state.customer_info.company = info['company']
 
                 # Ask for product
-                system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+                system_template = """Você é o assistente virtual da CSN, responsável por coletar informações para orçamentos.
                 Se o cliente forneceu o nome da empresa, agradeça. Em seguida, pergunte qual produto da CSN o cliente deseja solicitar."""
-                prompt = ChatPromptTemplate.from_messages([
-                    ("system", system_template),
-                    MessagesPlaceholder(variable_name="history")
-                ])
-                chain = prompt | ChatOpenAI(temperature=0.7)
-                ai_response = chain.invoke({"history": history})
-                state.messages.append(ChatMessage(
-                    content=ai_response.content,
-                    role="assistant"
-                ))
-                return state
 
-            # Extract product details
-            details = extract_quote_details(state.messages[-1].content)
-            
-            if state.quote_details and not state.quote_details.product_name and details.get('product_name'):
-                state.quote_details.product_name = details['product_name']
-                # Ask for quantity
-                system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
-                Pergunte a quantidade do produto que o cliente deseja."""
-                prompt = ChatPromptTemplate.from_messages([
-                    ("system", system_template),
-                    MessagesPlaceholder(variable_name="history")
-                ])
-                chain = prompt | ChatOpenAI(temperature=0.7)
-                ai_response = chain.invoke({"history": history})
-                state.messages.append(ChatMessage(
-                    content=ai_response.content,
-                    role="assistant"
-                ))
-                return state
-
-            if state.quote_details and not state.quote_details.quantity and details.get('quantity'):
-                state.quote_details.quantity = details['quantity']
-                # Ask for specifications
-                system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
-                Pergunte as especificações do produto (como dimensões, material, etc)."""
-                prompt = ChatPromptTemplate.from_messages([
-                    ("system", system_template),
-                    MessagesPlaceholder(variable_name="history")
-                ])
-                chain = prompt | ChatOpenAI(temperature=0.7)
-                ai_response = chain.invoke({"history": history})
-                state.messages.append(ChatMessage(
-                    content=ai_response.content,
-                    role="assistant"
-                ))
-                return state
-
-            if state.quote_details and not state.quote_details.specifications and details.get('specifications'):
-                state.quote_details.specifications = details['specifications']
-                # Confirm all details
-                system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
-                Confirme todos os detalhes do pedido com o cliente, incluindo:
-                - Produto: {product_name}
-                - Quantidade: {quantity}
-                - Especificações: {specifications}
-                
-                Pergunte se está tudo correto e se há mais alguma observação adicional."""
-                prompt = ChatPromptTemplate.from_messages([
-                    ("system", system_template.format(
-                        product_name=state.quote_details.product_name,
-                        quantity=state.quote_details.quantity,
-                        specifications=state.quote_details.specifications
-                    )),
-                    MessagesPlaceholder(variable_name="history")
-                ])
-                chain = prompt | ChatOpenAI(temperature=0.7)
-                ai_response = chain.invoke({"history": history})
-                state.messages.append(ChatMessage(
-                    content=ai_response.content,
-                    role="assistant"
-                ))
-                return state
+                return assistant_response(system_template, history, state)
 
             # If we have additional notes, update them
             if state.quote_details and details.get('additional_notes'):
                 state.quote_details.additional_notes = details['additional_notes']
                 # Thank the client and finish
-                system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+                system_template = """Você é o assistente virtual da CSN, responsável por coletar informações para orçamentos.
                 Agradeça o cliente e informe que em breve entraremos em contato com o orçamento."""
-                prompt = ChatPromptTemplate.from_messages([
-                    ("system", system_template),
-                    MessagesPlaceholder(variable_name="history")
-                ])
-                chain = prompt | ChatOpenAI(temperature=0.7)
-                ai_response = chain.invoke({"history": history})
-                state.messages.append(ChatMessage(
-                    content=ai_response.content,
-                    role="assistant"
-                ))
-                state.completed = True
-                return state
+
+                return assistant_response(system_template, history, state)
 
         # If we haven't returned yet, ask for missing info
         if not state.customer_info.name:
-            system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+            system_template = """Você é o assistente virtual da CSN, responsável por coletar informações para orçamentos.
             Solicite educadamente o nome do cliente."""
         elif not state.customer_info.email:
-            system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+            system_template = """Você é o assistente virtual da CSN, responsável por coletar informações para orçamentos.
             Solicite educadamente o e-mail do cliente."""
         elif not state.customer_info.phone:
-            system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+            system_template = """Você é o assistente virtual da CSN, responsável por coletar informações para orçamentos.
             Solicite educadamente o número de telefone do cliente."""
         elif state.quote_details and not state.quote_details.product_name:
-            system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+            system_template = """Você é o assistente virtual da CSN, responsável por coletar informações para orçamentos.
             Pergunte qual produto da CSN o cliente deseja."""
         elif state.quote_details and not state.quote_details.quantity:
-            system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+            system_template = """Você é o assistente virtual da CSN, responsável por coletar informações para orçamentos.
             Pergunte a quantidade do produto."""
         elif state.quote_details and not state.quote_details.specifications:
-            system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+            system_template = """Você é o assistente virtual da CSN, responsável por coletar informações para orçamentos.
             Pergunte as especificações do produto."""
         else:
-            system_template = """Você é o assistente virtual da CSN (Companhia Siderúrgica Nacional), responsável por coletar informações para orçamentos.
+            system_template = """Você é o assistente virtual da CSN, responsável por coletar informações para orçamentos.
             Confirme os detalhes do pedido e pergunte se há mais alguma observação."""
 
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", system_template),
-            MessagesPlaceholder(variable_name="history")
-        ])
-        chain = prompt | ChatOpenAI(temperature=0.7)
-        ai_response = chain.invoke({"history": history})
-        state.messages.append(ChatMessage(
-            content=ai_response.content,
-            role="assistant"
-        ))
-        return state
+        return assistant_response(system_template, history, state)
 
     return process_state
