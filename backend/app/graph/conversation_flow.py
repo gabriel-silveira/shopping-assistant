@@ -140,6 +140,7 @@ def create_conversation_graph():
             if msg.role == "user":
                 # Try to extract customer info from user messages
                 info = extract_customer_info(msg.content)
+
                 if info:
                     # Update customer info
                     current_info = {}

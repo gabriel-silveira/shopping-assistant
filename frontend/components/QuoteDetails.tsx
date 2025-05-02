@@ -24,11 +24,11 @@ export default function QuoteDetails({ customerInfo, quoteDetails }: QuoteDetail
     <div className="bg-white rounded-lg shadow-lg p-4 space-y-6">
       <div>
         <h2 className="text-xl font-semibold mb-4">Informações do Cliente</h2>
-        {customerInfo ? (
+        {customerInfo?.name ? (
           <div className="space-y-2">
             <p><span className="font-medium">Nome:</span> {customerInfo.name}</p>
-            <p><span className="font-medium">Email:</span> {customerInfo.email}</p>
-            <p><span className="font-medium">Telefone:</span> {customerInfo.phone}</p>
+            {customerInfo.email && <p><span className="font-medium">Email:</span> {customerInfo.email}</p>}
+            {customerInfo.phone && <p><span className="font-medium">Telefone:</span> {customerInfo.phone}</p>}
             {customerInfo.company && (
               <p><span className="font-medium">Empresa:</span> {customerInfo.company}</p>
             )}
