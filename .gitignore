@@ -47,7 +47,7 @@ backend/standalone_embed.sh
 backend/volumes
 backend/user.yaml
 
-
+__pycache__/
 
 
 
