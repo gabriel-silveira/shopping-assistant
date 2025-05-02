@@ -10,7 +10,7 @@ interface CustomerInfo {
 interface QuoteDetails {
   product_name: string;
   quantity: number;
-  specifications: Record<string, any>;
+  specifications: string;
   additional_notes?: string;
 }
 
@@ -24,11 +24,11 @@ export default function QuoteDetails({ customerInfo, quoteDetails }: QuoteDetail
     <div className="bg-white rounded-lg shadow-lg p-4 space-y-6">
       <div>
         <h2 className="text-xl font-semibold mb-4">Informações do Cliente</h2>
-        {customerInfo ? (
+        {customerInfo?.name ? (
           <div className="space-y-2">
             <p><span className="font-medium">Nome:</span> {customerInfo.name}</p>
-            <p><span className="font-medium">Email:</span> {customerInfo.email}</p>
-            <p><span className="font-medium">Telefone:</span> {customerInfo.phone}</p>
+            {customerInfo.email && <p><span className="font-medium">Email:</span> {customerInfo.email}</p>}
+            {customerInfo.phone && <p><span className="font-medium">Telefone:</span> {customerInfo.phone}</p>}
             {customerInfo.company && (
               <p><span className="font-medium">Empresa:</span> {customerInfo.company}</p>
             )}
@@ -45,16 +45,10 @@ export default function QuoteDetails({ customerInfo, quoteDetails }: QuoteDetail
             <p><span className="font-medium">Produto:</span> {quoteDetails.product_name}</p>
             <p><span className="font-medium">Quantidade:</span> {quoteDetails.quantity}</p>
             
-            {Object.keys(quoteDetails.specifications).length > 0 && (
+            {quoteDetails.specifications && (
               <div>
                 <p className="font-medium mb-1">Especificações:</p>
-                <ul className="list-disc list-inside pl-2">
-                  {Object.entries(quoteDetails.specifications).map(([key, value]) => (
-                    <li key={key} className="text-sm">
-                      {key}: {value}
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-sm">{quoteDetails.specifications}</p>
               </div>
             )}
             

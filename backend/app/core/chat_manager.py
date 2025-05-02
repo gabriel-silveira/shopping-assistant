@@ -8,15 +8,11 @@ class ChatManager:
         self.workflow = create_conversation_graph()
 
     def process_message(self, message: ChatMessage) -> ChatResponse:
-        print("Processing message:", message)
-
         # Add user message to state
         if message: self.state.messages.append(message)
         
-        print("Self workflow:", self.workflow)
         # Process through workflow
         self.state = self.workflow(self.state)
-        print("Self state:", self.state)
         
         # Get last assistant message
         last_message = next(
