@@ -195,7 +195,7 @@ class MilvusService:
         except Exception as e:
             print(f"Error importing products: {e}")
 
-    def search_similar_products(self, query_text: str, top_k: int = 5) -> List[Dict]:
+    def search_similar_products(self, query_text: str, top_k: int = 1) -> List[Dict]:
         """
         Search for similar products in Milvus.
         
@@ -204,7 +204,7 @@ class MilvusService:
             top_k: Number of similar products to return
             
         Returns:
-            List of dictionaries containing product information and similarity score
+            Returns information about the products found or a message indicating that nothing was found.
         """
         try:
             # Get the collection

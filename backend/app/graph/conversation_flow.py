@@ -3,6 +3,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
 from ..models.chat import ConversationState, ChatMessage, CustomerInfo, QuoteDetails
+from ..examples.retrive_products_data import retrieve_product_data
 from ..services.text_extractor import (
     extract_customer_name,
     extract_customer_email,
@@ -19,18 +20,21 @@ def create_conversation_graph():
         state: ConversationState,
         node_name: str,
     ) -> ConversationState:
+        print(f"Node: {node_name}\n")
+
         prompt = ChatPromptTemplate.from_messages([
             ("system", f"Você é o assistente virtual da {company_name}. {system_template}"),
             MessagesPlaceholder(variable_name="history")
         ])
+
         chain = prompt | ChatOpenAI(temperature=0.7)
+
         ai_response = chain.invoke({"history": history})
+
         state.messages.append(ChatMessage(
             content=ai_response.content,
             role="assistant"
         ))
-
-        print(f"Node: {node_name}\n")
 
         return state
 
@@ -88,21 +92,17 @@ def create_conversation_graph():
 
             return assistant_response(system_template, history, state, "ask_name")
 
-        # Check if we have customer name and need to collect more
+        # if we have customer name, collect more customer data
         if state.customer_info:
-            print("Message content:")
-            print(f"{state.messages[-1].content}\n")
-
             # Extract each piece of information from last message
             name = extract_customer_name(state.messages[-1].content)
             email = extract_customer_email(state.messages[-1].content)
             phone = extract_customer_phone(state.messages[-1].content)
             company = extract_customer_company(state.messages[-1].content)
 
-            print(f"Name: {name}")
-            print(f"Email: {email}")
-            print(f"Phone: {phone}")
-            print(f"Company: {company}\n")
+            # Extract company from last message (optional)
+            # if company:
+            #     state.customer_info.company = company
             
             # ask email
             if not state.customer_info.name and name:
@@ -120,29 +120,34 @@ def create_conversation_graph():
 
                 return assistant_response(system_template, history, state, "ask_phone")
 
-            # ask company
-            if not state.customer_info.company and phone:
-                state.customer_info.phone = phone
-
-                # Ask for company (optional)
-                system_template = """Agradeça o telefone fornecido e pergunte se o pedido é para alguma empresa e, se sim, solicite o nome da empresa."""
-
-                return assistant_response(system_template, history, state, "ask_company")
-
-            # After collecting customer info, start collecting quote details
+            # ask for quote / product details...
             if not state.quote_details and state.customer_info.name and state.customer_info.email and state.customer_info.phone:
                 # Initialize quote details
                 state.quote_details = QuoteDetails.create_empty()
-
-                # Extract company from last message (optional)
-                if company:
-                    state.customer_info.company = company
 
                 # Ask for product
                 system_template = """Se o cliente forneceu o nome da empresa, agradeça.
                 Em seguida, pergunte qual produto da CSN o cliente deseja solicitar."""
 
-                return assistant_response(system_template, history, state, "ask_product")
+                return retrieve_product_data("Aços Classe Relaminação", history, state)
+
+            # ask company
+            if (
+                state.customer_info.name
+                and state.customer_info.email
+                and state.customer_info.phone
+                and not state.customer_info.company
+            ):
+                print("Telefone fornecido: ", phone)
+
+                state.customer_info.phone = phone
+
+                # Ask for company (optional)
+                system_template = """Agradeça o telefone fornecido e pergunte se o pedido é para alguma empresa, lembrando que esta informação não é obrigatória."""
+
+                print("Template: ", system_template)
+
+                return assistant_response(system_template, history, state, "ask_company")
 
             # If we have additional notes, update them
             if state.quote_details and details.get('additional_notes'):
