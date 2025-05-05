@@ -280,6 +280,11 @@ class MilvusService:
 
             # Ordena por score decrescente
             similar_products.sort(key=lambda x: x["score"], reverse=True)
+
+            print("\nSimilar products:")
+            for similar_product in similar_products:
+                print(similar_product)
+
             return similar_products
 
         except Exception as e:

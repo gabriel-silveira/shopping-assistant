@@ -4,7 +4,7 @@ from app.services.milvus_service import MilvusService
 milvus = MilvusService()
 
 # Buscar produtos similares
-product_query = "quente"
+product_query = "cimento"
 print(f"\nBuscando por: {product_query}")
 print("-" * 50)
 
