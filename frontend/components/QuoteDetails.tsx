@@ -1,5 +1,7 @@
 'use client';
 
+import { QuoteDetail } from "@/app/page";
+
 interface CustomerInfo {
   name: string;
   email: string;
@@ -7,16 +9,9 @@ interface CustomerInfo {
   company?: string;
 }
 
-interface QuoteDetails {
-  product_name: string;
-  quantity: number;
-  specifications: string;
-  additional_notes?: string;
-}
-
 interface QuoteDetailsProps {
   customerInfo: CustomerInfo | null;
-  quoteDetails: QuoteDetails | null;
+  quoteDetails: QuoteDetail[] | null;
 }
 
 export default function QuoteDetails({ customerInfo, quoteDetails }: QuoteDetailsProps) {
@@ -40,26 +35,32 @@ export default function QuoteDetails({ customerInfo, quoteDetails }: QuoteDetail
 
       <div>
         <h2 className="text-xl font-semibold mb-4">Dados do Pedido</h2>
-        {quoteDetails ? (
-          <div className="space-y-2">
-            <p><span className="font-medium">Produto:</span> {quoteDetails.product_name}</p>
-            <p><span className="font-medium">Quantidade:</span> {quoteDetails.quantity}</p>
+        {quoteDetails && quoteDetails.length > 0 ? quoteDetails.map((quoteDetail, index) => (
+          <div
+            key={quoteDetail.id}
+            className="space-y-2"
+          >
+            <p><span className="font-medium">{index + 1}.</span> {quoteDetail.product_name}</p>
+
+            {Number(quoteDetail.quantity) > 0 && (
+              <p><span className="font-medium">Quantidade:</span> {quoteDetail.quantity}</p>
+            )}
             
-            {quoteDetails.specifications && (
+            {quoteDetail.specifications && (
               <div>
                 <p className="font-medium mb-1">Especificações:</p>
-                <p className="text-sm">{quoteDetails.specifications}</p>
+                <p className="text-sm">{quoteDetail.specifications}</p>
               </div>
             )}
             
-            {quoteDetails.additional_notes && (
+            {quoteDetail.additional_notes && (
               <div>
                 <p className="font-medium">Observações:</p>
-                <p className="text-sm">{quoteDetails.additional_notes}</p>
+                <p className="text-sm">{quoteDetail.additional_notes}</p>
               </div>
             )}
           </div>
-        ) : (
+        )) : (
           <p className="text-gray-500 italic">Nenhum item.</p>
         )}
       </div>
