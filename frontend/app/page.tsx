@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import ChatInput from '@/components/ChatInput';
 import ChatMessages from '@/components/ChatMessages';
-import QuoteDetails from '@/components/QuoteDetails';
+// import QuoteDetails from '@/components/QuoteDetails';
 
 interface ChatMessage {
   content: string;
@@ -82,12 +82,6 @@ export default function Home() {
           </div>
           <ChatInput onSendMessage={sendMessage} disabled={!isConnected} />
         </div>
-      </div>
-      <div className="w-96 p-4 bg-white shadow-lg rounded-lg h-fit sticky top-4">
-        <QuoteDetails
-          customerInfo={customerInfo}
-          quoteDetails={quoteDetails}
-        />
       </div>
     </main>
   );

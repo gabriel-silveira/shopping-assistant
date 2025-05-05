@@ -11,6 +11,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import Tool
 from app.models.chat import ConversationState, ChatMessage
+from app.prompts.prompts import main_prompt 
 
 # Add project root to Python path
 import sys
@@ -55,18 +56,15 @@ def query_product_database(query: str) -> Union[str, List[Dict]]:
 def retrieve_product_data(
   query: str,
   history: List[Union[HumanMessage, AIMessage]],
-  state: ConversationState,
-  node_name: str,
+  state: ConversationState
 ) -> ConversationState:
-  print(f"Node: {node_name}\n")
-
   # Configuração do modelo de linguagem
   llm = ChatOpenAI(temperature=0.7)
 
   # Configuração das ferramentas disponíveis
   tools = [
       Tool(
-          name="query_product_database",
+          name="QueryProductDatabase",
           func=query_product_database,
           description=query_product_database.__doc__
       )
@@ -74,14 +72,7 @@ def retrieve_product_data(
 
   # Template do prompt
   prompt = ChatPromptTemplate.from_messages([
-      ("system", """Você é um assistente virtual da CSN, especializado em atender clientes e fornecer informações sobre produtos.
-
-  REGRAS IMPORTANTES:
-  1. Seja sempre profissional e cortês
-  2. Use linguagem formal, mas amigável
-  3. Se o produto for encontrado, pergunte se deseja adicioná-lo ao orçamento (informe ao cliente que deve responder Sim ou Não)
-  4. Quando não encontrar um produto, sugira refinar a busca
-  5. Se o cliente perguntar sobre produtos, use a ferramenta query_product_database."""),
+      ("system", main_prompt),
       MessagesPlaceholder(variable_name="chat_history"),
       ("human", "{input}"),
       MessagesPlaceholder(variable_name="agent_scratchpad"),

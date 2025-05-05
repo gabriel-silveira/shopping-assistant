@@ -25,12 +25,32 @@ class ChatResponse(BaseModel):
     quote_details: Optional[List[Dict]] = None
     completed: bool = False
 
+class QuoteDetails(BaseModel):
+    pass
+
+class QuoteItemDetails(BaseModel):
+    pass
+
 class ConversationState(BaseModel):
+    """Represents the state of a conversation."""
     model_config = ConfigDict(from_attributes=True)
     
     messages: List[ChatMessage] = Field(default_factory=list)
     customer_info: Optional[CustomerInfo] = None
-    quote_details: Optional[List[Dict]] = None
-    current_step: str = "greeting"
-    current_product: Optional[Dict] = None
-    completed: bool = False
+    quote_details: Optional[QuoteDetails] = None
+    current_step: str = Field(default="greeting")
+
+    current_product: Optional[QuoteItemDetails] = None
+    current_product_name: Optional[str] = None
+    current_product_specifications: Optional[str] = None
+    
+    completed: bool = Field(default=False)
+
+    @classmethod
+    def create_empty(cls) -> 'ConversationState':
+        """Create a new empty conversation state with initialized lists."""
+        return cls(
+            messages=[],
+            current_step="greeting",
+            completed=False
+        )
