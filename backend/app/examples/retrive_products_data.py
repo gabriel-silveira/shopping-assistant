@@ -12,6 +12,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import Tool
 from app.models.chat import ConversationState, ChatMessage
 from app.prompts.prompts import main_prompt 
+from app.services.text_extractor import extract_intention
 
 # Add project root to Python path
 import sys
@@ -82,11 +83,13 @@ def retrieve_product_data(
   agent = create_openai_tools_agent(llm, tools, prompt)
   agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=False)
 
-  print(f"Query: {query}\n")
+  query_extracted = extract_intention(query)
+
+  print(f"Query extracted: {query_extracted}\n")
 
   # Processa a entrada do usuário
   result = agent_executor.invoke({
-      "input": query,
+      "input": query_extracted,
       "chat_history": history,
   })
 
@@ -96,3 +99,4 @@ def retrieve_product_data(
   ))
   
   return state
+  

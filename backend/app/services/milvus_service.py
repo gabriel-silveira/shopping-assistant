@@ -188,6 +188,8 @@ class MilvusService:
                 "index_type": "IVF_FLAT",
                 "params": {"nlist": 128}
             })
+
+            collection.flush()
             
             # Load collection for searching
             collection.load()
