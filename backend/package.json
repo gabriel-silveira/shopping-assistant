@@ -1,0 +1,12 @@
+{
+  "name": "shopping-assistant-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start:db": "sudo docker start milvus-standalone"
+  },
+  "author": "Gabriel Silveira",
+  "license": "ISC"
+}

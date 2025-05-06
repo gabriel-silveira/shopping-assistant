@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import ChatInput from '@/components/ChatInput';
 import ChatMessages from '@/components/ChatMessages';
-import QuoteDetails from '@/components/QuoteDetails';
+// import QuoteDetails from '@/components/QuoteDetails';
 
 interface ChatMessage {
   content: string;
@@ -18,17 +18,18 @@ interface CustomerInfo {
   company?: string;
 }
 
-interface QuoteDetails {
+export interface QuoteDetail {
+  id?: string;
   product_name: string;
   quantity: number;
-  specifications: Record<string, any>;
+  specifications: string;
   additional_notes?: string;
 }
 
 export default function Home() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
-  const [quoteDetails, setQuoteDetails] = useState<QuoteDetails | null>(null);
+  const [quoteDetails, setQuoteDetails] = useState<QuoteDetail[] | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -72,22 +73,25 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen bg-gray-100">
-      <div className="flex-1 flex flex-col p-4 overflow-hidden">
-        <h1 className="text-2xl font-bold mb-4">Assistente de Orçamentos</h1>
-        <div className="flex-1 bg-white rounded-lg shadow-lg overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-y-auto">
+    <div className="container mx-auto h-full p-8">
+      <div className="max-w-4xl mx-auto h-full bg-white rounded-xl shadow-xl flex flex-col">
+        {/* Cabeçalho da seção */}
+        <div className="py-4 px-6 rounded-t-xl" style={{ backgroundColor: '#34303C' }}>
+          <h1 className="text-2xl font-semibold text-white">Assistente de Orçamentos</h1>
+        </div>
+
+        {/* Container de mensagens com rolagem */}
+        <div className="flex-1 overflow-hidden">
+          <div className="h-full overflow-y-auto px-6">
             <ChatMessages messages={messages} />
           </div>
+        </div>
+
+        {/* Input fixo no rodapé */}
+        <div className="p-6 border-t">
           <ChatInput onSendMessage={sendMessage} disabled={!isConnected} />
         </div>
       </div>
-      <div className="w-96 p-4 bg-white shadow-lg rounded-lg h-fit sticky top-4">
-        <QuoteDetails
-          customerInfo={customerInfo}
-          quoteDetails={quoteDetails}
-        />
-      </div>
-    </main>
+    </div>
   );
 }

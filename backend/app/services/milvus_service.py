@@ -120,8 +120,8 @@ class MilvusService:
             print(f"Parsing file: {file_path}")
             print(f"Category match: {category}")
             
-            # Extract description (everything after ## Description)
-            description = re.search(r'## Description\s+(.*?)(?=##|$)', content, re.DOTALL)
+            # Extract description (everything after ## Description until the end of file)
+            description = re.search(r'## Description\s*\n([\s\S]*?)$', content)
             description = description.group(1).strip() if description else ""
             
             return {
@@ -158,6 +158,9 @@ class MilvusService:
                     if product:
                         # Combine product name and description for embedding
                         text_for_embedding = f"{product['product_name']} {product['description']}"
+
+                        print(f"\n\nEmbedding for {product['product_name']}\n")
+                        print(text_for_embedding)
                         
                         # Get embedding from OpenAI
                         embedding = self._get_embedding(text_for_embedding)
@@ -188,6 +191,8 @@ class MilvusService:
                 "index_type": "IVF_FLAT",
                 "params": {"nlist": 128}
             })
+
+            collection.flush()
             
             # Load collection for searching
             collection.load()
@@ -195,7 +200,7 @@ class MilvusService:
         except Exception as e:
             print(f"Error importing products: {e}")
 
-    def search_similar_products(self, query_text: str, top_k: int = 1) -> List[Dict]:
+    def search_similar_products(self, query_text: str, top_k: int = 10) -> List[Dict]:
         """
         Search for similar products in Milvus.
         
@@ -211,11 +216,18 @@ class MilvusService:
             collection = Collection(self.collection_name)
             collection.load()
 
-            # Normalize query text (remove acentos e converte para minúsculas)
-            import unicodedata
-            query_normalized = unicodedata.normalize('NFKD', query_text.lower()) \
-                .encode('ASCII', 'ignore') \
-                .decode('ASCII')
+            # Debug: Check if collection has data
+            stats = collection.stats()
+            row_count = stats.get('row_count', 0)
+            print(f"\nTotal products in database: {row_count}")
+            
+            if row_count == 0:
+                print("No products in database. Importing products...")
+                self.import_products_from_markdown("/home/gabriel-silveira/Projects/shopping-assistant/backend/data/products")
+                collection.load()  # Reload after import
+                stats = collection.stats()
+                row_count = stats.get('row_count', 0)
+                print(f"After import: {row_count} products in database")
 
             # Get embedding from OpenAI
             query_vector = self._get_embedding(query_text)
@@ -242,49 +254,26 @@ class MilvusService:
                     # Get entity fields
                     fields = hit.fields
                     product_name = str(fields.get("product_name", ""))
+                    description = str(fields.get("description", ""))
+                    price = float(fields.get("price", 0.0))
+                    category = str(fields.get("category", ""))
                     
-                    # Normalize product name
-                    product_name_normalized = unicodedata.normalize('NFKD', product_name.lower()) \
-                        .encode('ASCII', 'ignore') \
-                        .decode('ASCII')
+                    # Debug
+                    print(f"\nFound product: {product_name}")
+                    print(f"Score: {hit.score}")
                     
-                    # Calcula score combinado:
-                    # 1. Score de similaridade do vetor (0-1)
-                    vector_score = hit.score
-                    
-                    # 2. Score de correspondência de texto (0-1)
-                    # Verifica se as palavras da busca estão no nome do produto
-                    text_match_score = 0.0
-                    query_words = set(query_normalized.split())
-                    product_words = set(product_name_normalized.split())
-                    
-                    if query_words:  # Evita divisão por zero
-                        matching_words = query_words.intersection(product_words)
-                        text_match_score = len(matching_words) / len(query_words)
-                    
-                    # Score final: média ponderada (70% vetor, 30% texto)
-                    final_score = (0.7 * vector_score) + (0.3 * text_match_score)
-
-                    product = {
-                        "id": hit.id,
-                        "score": final_score,
+                    similar_products.append({
                         "product_name": product_name,
-                        "description": str(fields.get("description", "")),
-                        "price": float(fields.get("price", 0.0)),
-                        "category": str(fields.get("category", ""))
-                    }
-                    
-                    # Inclui produtos com score combinado acima de 0.5 (50%)
-                    if final_score >= 0.5:
-                        similar_products.append(product)
+                        "description": description,
+                        "price": price,
+                        "category": category
+                    })
 
-            # Ordena por score decrescente
-            similar_products.sort(key=lambda x: x["score"], reverse=True)
-            return similar_products
+            return similar_products if similar_products else []
 
         except Exception as e:
-            print(f"Error searching for similar products: {e}")
-            return []
+            print(f"Error searching products: {e}")
+            return f"Erro ao buscar produtos: {str(e)}"
 
     def close(self):
         """Close connection to Milvus."""

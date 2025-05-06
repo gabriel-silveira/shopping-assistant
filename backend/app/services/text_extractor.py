@@ -1,6 +1,43 @@
 import re
 from typing import Optional, Dict, Any
 
+def extract_intention(texto: str) -> str:
+    """
+    Remove palavras que diluem a semântica de uma consulta
+    e retorna uma versão enxuta focada em intenção de produto.
+    """
+    texto = texto.lower()
+
+    # Frases introdutórias e educadas comuns que não ajudam semanticamente
+    expressoes_ineuteis = [
+        "bom dia", "boa tarde", "boa noite",
+        "oi", "olá", "tudo bem", "como vai",
+        "gostaria de", "preciso de", "queria", "desejo",
+        "venho por meio deste", "estou interessado em",
+        "por favor", "seria possível", "poderia me informar",
+        "quero", "necessito de", "tem como",
+        "informações sobre", "gostaria", "me passe", "me envie"
+    ]
+
+    # Substitui expressões inúteis por vazio
+    for exp in expressoes_ineuteis:
+        texto = texto.replace(exp, "")
+
+    # Remove pontuação
+    texto = re.sub(r"[^\w\s]", "", texto)
+
+    # Remove stopwords (opcional: pode usar uma lista mais completa ou nltk)
+    stopwords_basicas = [
+        "um", "uma", "uns", "umas", "de", "do", "da", "dos", "das",
+        "em", "para", "por", "com", "e", "a", "o", "que", "sobre",
+        "no", "na", "nos", "nas", "me", "te", "se", "lhe"
+    ]
+    palavras = texto.split()
+    palavras_filtradas = [p for p in palavras if p not in stopwords_basicas]
+
+    # Retorna a intenção filtrada
+    return " ".join(palavras_filtradas).strip()
+
 def extract_customer_name(text: str) -> Optional[str]:
     """Extract customer name from text using regex patterns."""
     # Primeiro tenta padrões específicos
