@@ -24,7 +24,7 @@ export default function ChatMessages({ messages }: ChatMessagesProps) {
   }, [messages]);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4">
+    <div className="flex-1 overflow-y-auto p-4 ">
       <div className="space-y-4">
         {messages.map((message, index) => (
           <div
@@ -40,8 +40,8 @@ export default function ChatMessages({ messages }: ChatMessagesProps) {
                   : 'bg-gray-100 text-gray-800'
               }`}
             >
-              <p className="text-sm">{message.content}</p>
-              <p className="text-xs mt-1 opacity-75">
+              <p className="text-md">{message.content}</p>
+              <p className="text-sm mt-1 opacity-75">
                 {new Date(message.timestamp).toLocaleTimeString()}
               </p>
             </div>

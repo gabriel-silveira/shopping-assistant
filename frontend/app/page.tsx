@@ -76,8 +76,8 @@ export default function Home() {
     <div className="container mx-auto h-full p-8">
       <div className="max-w-4xl mx-auto h-full bg-white rounded-xl shadow-xl flex flex-col">
         {/* Cabeçalho da seção */}
-        <div className="p-6 border-b">
-          <h1 className="text-2xl font-bold">Assistente de Orçamentos</h1>
+        <div className="py-4 px-6 rounded-t-xl" style={{ backgroundColor: '#34303C' }}>
+          <h1 className="text-2xl font-semibold text-white">Assistente de Orçamentos</h1>
         </div>
 
         {/* Container de mensagens com rolagem */}
