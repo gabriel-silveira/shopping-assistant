@@ -73,16 +73,25 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen bg-gray-100">
-      <div className="flex-1 flex flex-col p-4 overflow-hidden">
-        <h1 className="text-2xl font-bold mb-4">Assistente de Orçamentos</h1>
-        <div className="flex-1 bg-white rounded-lg shadow-lg overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-y-auto">
+    <div className="container mx-auto h-full p-8">
+      <div className="max-w-4xl mx-auto h-full bg-white rounded-xl shadow-xl flex flex-col">
+        {/* Cabeçalho da seção */}
+        <div className="p-6 border-b">
+          <h1 className="text-2xl font-bold">Assistente de Orçamentos</h1>
+        </div>
+
+        {/* Container de mensagens com rolagem */}
+        <div className="flex-1 overflow-hidden">
+          <div className="h-full overflow-y-auto px-6">
             <ChatMessages messages={messages} />
           </div>
+        </div>
+
+        {/* Input fixo no rodapé */}
+        <div className="p-6 border-t">
           <ChatInput onSendMessage={sendMessage} disabled={!isConnected} />
         </div>
       </div>
-    </main>
+    </div>
   );
 }

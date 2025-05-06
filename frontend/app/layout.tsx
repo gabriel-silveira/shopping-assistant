@@ -1,20 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
+import Header from "./components/Header";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Assistente virtual | CSN",
-  description: "Assistente virtual da Companhia Siderúrgica Nacional",
+  title: "Assistente Virtual CSN",
+  description: "Assistente virtual para consulta de produtos CSN",
 };
 
 export default function RootLayout({
@@ -23,11 +16,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+    <html lang="pt-BR">
+      <body className={inter.className}>
+        <div className="min-h-screen flex flex-col">
+          <Header />
+          {/* Espaçador para compensar o header fixo */}
+          <div className="h-[100px]"></div>
+          {/* Container principal com altura total e rolagem */}
+          <main className="flex-1 bg-gray-200 fixed top-[100px] left-0 right-0 bottom-0 overflow-y-auto">
+            {children}
+          </main>
+        </div>
       </body>
     </html>
   );
