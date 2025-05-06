@@ -3,8 +3,8 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
 from ..models.chat import ConversationState, ChatMessage, CustomerInfo
-from ..examples.retrive_products_data import retrieve_product_data
-from ..prompts.prompts import main_prompt, company_name
+from ..services.retrive_products_data import retrieve_product_data
+from ..prompts.prompts import first_prompt, company_name
 from ..services.text_extractor import (
     extract_customer_name,
     extract_customer_email,
@@ -22,7 +22,7 @@ def create_conversation_graph():
         print(f"Node: {node_name}\n")
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", main_prompt),
+            ("system", system_template),
             MessagesPlaceholder(variable_name="history")
         ])
 
@@ -51,7 +51,6 @@ def create_conversation_graph():
             ))
             return state
 
-        print('0 - - - - - - - - - - - - - - - - - - - - - ')
         # Convert chat history to LangChain message format
         history: List[Union[HumanMessage, AIMessage]] = []
         for msg in state.messages:
@@ -84,30 +83,22 @@ def create_conversation_graph():
             else:
                 history.append(AIMessage(content=msg.content))
 
-        print('1 - - - - - - - - - - - - - - - - - - - - - ')
-
         # ask name
         if len(state.messages) == 2 and state.messages[-1].role == "user":
-            print('2 - - - - - - - - - - - - - - - - - - - - - ')
             # After first user message, start collecting info
             
             # Initialize customer info
             state.customer_info = CustomerInfo()
-            
-            # First question: Name
-            system_template = """Agradeça o interesse do cliente e pergunte seu nome de forma educada.
-            Não solicite nenhuma informação sobre produtos nesta etapa."""
 
-            return assistant_response(system_template, history, state, "ask_name")
+            return assistant_response(first_prompt, history, state, "ask_name")
 
         # if we have customer name, collect more customer data
         if state.customer_info:
-            print('3 - - - - - - - - - - - - - - - - - - - - - ')
             # Extract each piece of information from last message
-            name = extract_customer_name(state.messages[-1].content)
-            email = extract_customer_email(state.messages[-1].content)
-            phone = extract_customer_phone(state.messages[-1].content)
-            company = extract_customer_company(state.messages[-1].content)
+            # name = extract_customer_name(state.messages[-1].content)
+            # email = extract_customer_email(state.messages[-1].content)
+            # phone = extract_customer_phone(state.messages[-1].content)
+            # company = extract_customer_company(state.messages[-1].content)
 
             return retrieve_product_data(state.messages[-1].content, history, state)
 
