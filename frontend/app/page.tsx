@@ -9,6 +9,13 @@ interface ChatMessage {
   content: string;
   role: 'user' | 'assistant';
   timestamp: string;
+  current_step?: string;
+  current_product?: {
+    name: string;
+    description: string;
+    price: number;
+    category: string;
+  };
 }
 
 interface CustomerInfo {
@@ -43,7 +50,13 @@ export default function Home() {
 
     wsRef.current.onmessage = (event) => {
       const response = JSON.parse(event.data);
-      setMessages(prev => [...prev, response.message]);
+
+      setMessages(prev => [...prev, {
+        ...response.message,
+        current_step: response.current_step,
+        current_product: response.current_product,
+      }]);
+
       if (response.customer_info) setCustomerInfo(response.customer_info);
       if (response.quote_details) setQuoteDetails(response.quote_details);
     };

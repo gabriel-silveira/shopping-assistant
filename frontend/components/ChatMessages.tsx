@@ -1,12 +1,19 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { boldenDoubleAsterisks } from '@/services/text-service';
+import { parse_message } from '@/services/text-service';
 
 interface Message {
   content: string;
   role: 'user' | 'assistant';
   timestamp: string;
+  current_step?: string;
+  current_product?: {
+    name: string;
+    description: string;
+    price: number;
+    category: string;
+  };
 }
 
 interface ChatMessagesProps {
@@ -19,6 +26,12 @@ export default function ChatMessages({ messages }: ChatMessagesProps) {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  const handleAddToOrder = (message: Message) => {
+    alert('Adicionar ao pedido');
+
+    console.log(message);
+  }
 
   useEffect(() => {
     scrollToBottom();
@@ -41,10 +54,17 @@ export default function ChatMessages({ messages }: ChatMessagesProps) {
                   : 'bg-gray-100 text-gray-800'
               }`}
             >
-              <p className="text-md whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: boldenDoubleAsterisks(message.content) }}></p>
+              <p className="text-md whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: parse_message(message.content) }}></p>
+
               <p className="text-sm mt-1 opacity-75">
                 {new Date(message.timestamp).toLocaleTimeString()}
               </p>
+
+              {(message.current_step === "add_to_order" && message.current_product) && (
+                <button onClick={() => handleAddToOrder(message)} className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 cursor-pointer disabled:cursor-not-allowed">
+                  Adicionar {message.current_product?.name} ao Pedido
+                </button>
+              )}
             </div>
           </div>
         ))}

@@ -5,7 +5,7 @@
  * @param text A string de entrada que pode conter texto para ser formatado em negrito.
  * @returns A string com as substituições feitas.
  */
-export function boldenDoubleAsterisks(text: string): string {
+function boldenDoubleAsterisks(text: string): string {
   // Expressão Regular:
   // \*\*     : Corresponde aos dois asteriscos de abertura (escapados, pois * é um metacaractere).
   // (      : Inicia um grupo de captura.
@@ -22,4 +22,23 @@ export function boldenDoubleAsterisks(text: string): string {
   const replacement = '<b>$1</b>';
 
   return text.replace(regex, replacement);
+}
+
+function parse_actions(text: string): string {
+  if (text.includes("{add_to_order}"))
+    return text.replace("{add_to_order}", "");
+
+  return text;
+}
+
+export function parse_message(message: string): string {
+  let final_text: string = "";
+
+  const bolden_text = boldenDoubleAsterisks(message);
+
+  const text_with_actions = parse_actions(bolden_text);
+
+  final_text = text_with_actions;
+
+  return final_text;
 }

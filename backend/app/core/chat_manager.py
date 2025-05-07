@@ -32,5 +32,6 @@ class ChatManager:
             customer_info=self.state.customer_info,
             quote_details=self.state.quote_details,
             completed=self.state.completed,
-            current_step=self.state.current_step
+            current_step=self.state.current_step,
+            current_product=self.state.current_product,
         )

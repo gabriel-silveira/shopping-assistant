@@ -31,6 +31,7 @@ class ChatResponse(BaseModel):
     quote_details: Optional[List[Dict]] = None
     completed: bool = False
     current_step: str = Field(default="greeting")
+    current_product: Optional[Dict] = None
 
 class QuoteDetails(BaseModel):
     pass

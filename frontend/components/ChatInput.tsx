@@ -32,7 +32,7 @@ export default function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
         <button
           type="submit"
           disabled={disabled || !message.trim()}
-          className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 cursor-pointer disabled:cursor-not-allowed"
         >
           Enviar
         </button>

@@ -91,7 +91,7 @@ def answer_product_query(
         })
 
         state.messages.append(ChatMessage(
-            content=f"{result['output']}\n\n{'{add_to_order}'}",
+            content=f"{result['output']}{'{add_to_order}'}",
             role="assistant"
         ))
 
