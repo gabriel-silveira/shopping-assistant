@@ -3,7 +3,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
 from ..models.chat import ConversationState, ChatMessage, CustomerInfo
-from ..services.retrive_products_data import retrieve_product_data
+from ..services.retrive_products_data import answer_product_query
 from ..prompts.prompts import ask_customer_name_prompt, company_name
 from ..services.text_extractor import (
     extract_customer_name,
@@ -100,27 +100,27 @@ def create_conversation_graph():
 
         # if we have the customer name
         if state.customer_info.name:
-            return retrieve_product_data(state.messages[-1].content, history, state)
+            if state.current_step == "add_to_order":
+                print("Add product to order")
+
+                return state
+            else:
+                state.current_step = "customer_questions"
+
+                return answer_product_query(state.messages[-1].content, history, state)
         else:
             # try to get customer name...
 
             name = extract_customer_name(state.messages[-1].content)
 
-            print(f"Extracted name: {name}")
-
             # proceed answering the first customer question
             if name:
-                print('HAS NAME')
                 state.current_step = "customer_questions"
 
                 state.customer_info.name = name
 
-                print(f"Set customer name: {state.customer_info.name}")
-
-                return retrieve_product_data(state.messages[1].content, history, state)
+                return answer_product_query(state.messages[1].content, history, state)
             else:
-                print('DOES NOT HAVE NAME')
-
                 # ask customer name again!
                 return insist_customer_name(history, state)
 

@@ -9,7 +9,7 @@ def extract_intention(texto: str) -> str:
     texto = texto.lower()
 
     # Frases introdutórias e educadas comuns que não ajudam semanticamente
-    expressoes_ineuteis = [
+    expressoes_inuteis = [
         "bom dia", "boa tarde", "boa noite",
         "oi", "olá", "tudo bem", "como vai",
         "gostaria de", "preciso de", "queria", "desejo",
@@ -20,7 +20,7 @@ def extract_intention(texto: str) -> str:
     ]
 
     # Substitui expressões inúteis por vazio
-    for exp in expressoes_ineuteis:
+    for exp in expressoes_inuteis:
         texto = texto.replace(exp, "")
 
     # Remove pontuação
@@ -32,6 +32,8 @@ def extract_intention(texto: str) -> str:
         "em", "para", "por", "com", "e", "a", "o", "que", "sobre",
         "no", "na", "nos", "nas", "me", "te", "se", "lhe"
     ]
+
+    # Remove stopwords
     palavras = texto.split()
     palavras_filtradas = [p for p in palavras if p not in stopwords_basicas]
 

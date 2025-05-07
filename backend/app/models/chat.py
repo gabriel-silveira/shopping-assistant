@@ -46,11 +46,7 @@ class ConversationState(BaseModel):
     customer_info: CustomerInfo = CustomerInfo()
     quote_details: Optional[QuoteDetails] = None
     current_step: str = Field(default="greeting")
-
-    current_product: Optional[QuoteItemDetails] = None
-    current_product_name: Optional[str] = None
-    current_product_specifications: Optional[str] = None
-    
+    current_product: Optional[Dict] = None
     completed: bool = Field(default=False)
 
     @classmethod
