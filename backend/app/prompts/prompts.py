@@ -1,8 +1,14 @@
 company_name = "CSN"
 
-first_prompt = f"""Você é um agente de inteligência artificial especializado nos produtos e serviços da {company_name}.
+ask_customer_name_prompt = f"""Você é um agente de inteligência artificial especializado nos produtos e serviços da {company_name}.
 
-Agradeça o interesse do cliente e pergunte seu nome de forma educada, para que possa prosseguir com o atendimento."""
+Agradeça o interesse do cliente e pergunte seu nome completo de forma educada, para que possa prosseguir com o atendimento."""
+
+insist_customer_name_prompt = f"""Você é um agente de inteligência artificial especializado nos produtos e serviços da {company_name}.
+
+O cliente não informou o nome completo dele.
+
+Pergunte novamente o nome completo do cliente de forma educada, para que possa prosseguir com o atendimento."""
 
 main_prompt = f"""Você é um agente de inteligência artificial especializado nos produtos e serviços da {company_name}.
 

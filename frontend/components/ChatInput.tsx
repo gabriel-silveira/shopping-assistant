@@ -19,7 +19,7 @@ export default function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 border-t">
+    <form onSubmit={handleSubmit}>
       <div className="flex gap-2">
         <input
           type="text"

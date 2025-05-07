@@ -21,9 +21,10 @@ class ChatResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
     message: ChatMessage
-    customer_info: Optional[CustomerInfo] = None
+    customer_info: CustomerInfo = CustomerInfo()
     quote_details: Optional[List[Dict]] = None
     completed: bool = False
+    current_step: str = Field(default="greeting")
 
 class QuoteDetails(BaseModel):
     pass
@@ -36,7 +37,7 @@ class ConversationState(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
     messages: List[ChatMessage] = Field(default_factory=list)
-    customer_info: Optional[CustomerInfo] = None
+    customer_info: CustomerInfo = CustomerInfo()
     quote_details: Optional[QuoteDetails] = None
     current_step: str = Field(default="greeting")
 
@@ -52,5 +53,6 @@ class ConversationState(BaseModel):
         return cls(
             messages=[],
             current_step="greeting",
-            completed=False
+            completed=False,
+            customer_info=CustomerInfo(),
         )

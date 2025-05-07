@@ -33,6 +33,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
     
     try:
         while True:
+            # receive message from client
             data = await websocket.receive_text()
             message = ChatMessage.parse_raw(data)
             
