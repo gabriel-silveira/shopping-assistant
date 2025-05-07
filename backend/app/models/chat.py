@@ -2,6 +2,12 @@ from datetime import datetime
 from typing import Optional, List, Dict
 from pydantic import BaseModel, Field, ConfigDict
 
+class ProductInfo(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    category: Optional[str] = None
+
 class CustomerInfo(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     

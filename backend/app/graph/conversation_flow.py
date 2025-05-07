@@ -117,7 +117,7 @@ def create_conversation_graph():
 
                 print(f"Set customer name: {state.customer_info.name}")
 
-                return retrieve_product_data(state.messages[-1].content, history, state)
+                return retrieve_product_data(state.messages[1].content, history, state)
             else:
                 print('DOES NOT HAVE NAME')
 

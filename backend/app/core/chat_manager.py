@@ -23,8 +23,8 @@ class ChatManager:
         if not last_message:
             raise ValueError("No assistant message found in state")
 
-        print(f"Current step: {self.state.current_step}")
-        print(f"Customer name: {self.state.customer_info.name}")
+        print(f"CURRENT STEP: {self.state.current_step}")
+        print(f"MESSAGES: {self.state.messages}")
         
         # Create response
         return ChatResponse(
