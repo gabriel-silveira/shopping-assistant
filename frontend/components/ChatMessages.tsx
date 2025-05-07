@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { boldenDoubleAsterisks } from '@/services/text-service';
 
 interface Message {
   content: string;
@@ -40,7 +41,7 @@ export default function ChatMessages({ messages }: ChatMessagesProps) {
                   : 'bg-gray-100 text-gray-800'
               }`}
             >
-              <p className="text-md">{message.content}</p>
+              <p className="text-md whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: boldenDoubleAsterisks(message.content) }}></p>
               <p className="text-sm mt-1 opacity-75">
                 {new Date(message.timestamp).toLocaleTimeString()}
               </p>

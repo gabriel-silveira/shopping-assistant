@@ -5,7 +5,7 @@ import unicodedata
 import markdown
 
 class MarkdownSearchService:
-    def __init__(self, products_dir: str = "/home/gabriel-silveira/Projects/shopping-assistant/backend/data/products"):
+    def __init__(self, products_dir: str = "./data/products"):
         self.products_dir = products_dir
 
     def _normalize_text(self, text: str) -> str:
